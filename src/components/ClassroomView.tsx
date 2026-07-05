@@ -1,7 +1,8 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { ExportImageButton } from './ExportImageButton'
 import { SeatMap } from './SeatMap'
 import { ShuffleControls } from './ShuffleControls'
 import { SwapControls } from './SwapControls'
@@ -28,8 +29,11 @@ export function ClassroomView({
   const [probsLoading, setProbsLoading] = useState(false)
   const [swapMode, setSwapMode] = useState(false)
   const [swapPicks, setSwapPicks] = useState<string[]>([])
+  const mapRef = useRef<HTMLDivElement>(null)
+  const avoidPrevRef = useRef(avoidPrev) // 진행 중 fetch가 최신 토글과 일치하는지 확인용
 
   const setAvoidPrev = useCallback((v: boolean) => {
+    avoidPrevRef.current = v
     setAvoidPrevState(v)
     setProbs(null) // 토글이 바뀌면 확률도 달라짐 → 캐시 무효화
   }, [])
@@ -43,8 +47,13 @@ export function ClassroomView({
     if (!probs && !probsLoading) {
       setProbsLoading(true)
       try {
-        const res = await fetch(`/api/probabilities?avoidPrev=${avoidPrev}`)
-        if (res.ok) setProbs((await res.json()).probabilities)
+        const requested = avoidPrev // fetch 시작 시점의 토글 값 고정
+        const res = await fetch(`/api/probabilities?avoidPrev=${requested}`)
+        if (res.ok) {
+          const json = await res.json()
+          // 진행 중 토글이 바뀌었으면(요청 시점과 불일치) 오래된 결과 폐기
+          setProbs(current => (requested === avoidPrevRef.current ? json.probabilities : current))
+        }
       } finally {
         setProbsLoading(false)
       }
@@ -122,15 +131,23 @@ export function ClassroomView({
         </p>
       )}
 
-      <SeatMap
-        students={students}
-        arrangement={arrangement}
-        probRow={probRow}
-        selectedStudentId={selectedStudentId}
-        swapPicks={swapPicks}
-        revealKey={revealKey}
-        onSeatClick={handleSeatClick}
-      />
+      {arrangement && (
+        <div className="flex justify-end">
+          <ExportImageButton targetRef={mapRef} />
+        </div>
+      )}
+
+      <div ref={mapRef}>
+        <SeatMap
+          students={students}
+          arrangement={arrangement}
+          probRow={probRow}
+          selectedStudentId={selectedStudentId}
+          swapPicks={swapPicks}
+          revealKey={revealKey}
+          onSeatClick={handleSeatClick}
+        />
+      </div>
 
       {!arrangement && (
         <section className="flex flex-wrap gap-2">
