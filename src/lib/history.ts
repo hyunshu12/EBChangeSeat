@@ -5,6 +5,7 @@ export interface SessionRow {
   created_at: string
   type: 'shuffle' | 'swap'
   invalidated: boolean
+  executed_by?: string
 }
 
 export interface AssignmentRow {
