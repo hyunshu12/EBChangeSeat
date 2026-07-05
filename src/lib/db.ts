@@ -19,6 +19,13 @@ export function arrangementToRows(sessionId: string, arrangement: Arrangement): 
   }))
 }
 
+/** Arrangement → RPC p_assignments 페이로드 (session_id 없이 student_id/seat_id만). */
+export function arrangementToRpcPayload(
+  arrangement: Arrangement,
+): Array<{ student_id: string; seat_id: string }> {
+  return Object.entries(arrangement).map(([student_id, seat_id]) => ({ student_id, seat_id }))
+}
+
 export async function fetchHistoryRows(): Promise<{ sessions: SessionRow[]; assignments: AssignmentRow[] }> {
   const db = supabaseAdmin()
   const [sessions, assignments] = await Promise.all([
@@ -49,22 +56,17 @@ export async function insertShuffleSession(p: {
   arrangement: Arrangement
 }): Promise<string> {
   const db = supabaseAdmin()
-  const { data, error } = await db
-    .from('sessions')
-    .insert({
-      type: 'shuffle',
-      executed_by: p.executedBy,
-      avoid_prev: p.avoidPrev,
-      seed: p.seed,
-      redraw_count: p.redrawCount,
-      prob_snapshot: p.probSnapshot,
-    })
-    .select('id')
-    .single()
+  const { data, error } = await db.rpc('insert_session_with_assignments', {
+    p_type: 'shuffle',
+    p_executed_by: p.executedBy,
+    p_avoid_prev: p.avoidPrev,
+    p_seed: p.seed,
+    p_redraw_count: p.redrawCount,
+    p_prob_snapshot: p.probSnapshot,
+    p_assignments: arrangementToRpcPayload(p.arrangement),
+  })
   if (error) throw error
-  const { error: aErr } = await db.from('assignments').insert(arrangementToRows(data.id, p.arrangement))
-  if (aErr) throw aErr
-  return data.id
+  return data as string
 }
 
 export async function insertSwapSession(p: {
@@ -72,17 +74,17 @@ export async function insertSwapSession(p: {
   entries: Array<{ studentId: string; seatId: string }>
 }): Promise<string> {
   const db = supabaseAdmin()
-  const { data, error } = await db
-    .from('sessions')
-    .insert({ type: 'swap', executed_by: p.executedBy })
-    .select('id')
-    .single()
+  const { data, error } = await db.rpc('insert_session_with_assignments', {
+    p_type: 'swap',
+    p_executed_by: p.executedBy,
+    p_avoid_prev: null,
+    p_seed: null,
+    p_redraw_count: 0,
+    p_prob_snapshot: null,
+    p_assignments: p.entries.map(e => ({ student_id: e.studentId, seat_id: e.seatId })),
+  })
   if (error) throw error
-  const { error: aErr } = await db.from('assignments').insert(
-    p.entries.map(e => ({ session_id: data.id, student_id: e.studentId, seat_id: e.seatId })),
-  )
-  if (aErr) throw aErr
-  return data.id
+  return data as string
 }
 
 export async function setSessionInvalidated(sessionId: string): Promise<void> {
