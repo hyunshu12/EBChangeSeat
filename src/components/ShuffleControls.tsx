@@ -6,6 +6,7 @@ import type { Arrangement } from '@/lib/types'
 const ERROR_MESSAGES: Record<string, string> = {
   wrong_pin: 'PIN이 올바르지 않습니다',
   rate_limited: '시도 횟수를 초과했습니다. 10분 후 다시 시도하세요',
+  concurrent_shuffle: '다른 사람이 방금 셔플을 실행했습니다. 새로고침 후 다시 시도하세요',
 }
 
 export function ShuffleControls({

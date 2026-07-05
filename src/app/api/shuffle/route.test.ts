@@ -48,4 +48,10 @@ describe('POST /api/shuffle', () => {
     const res = await POST(new Request('http://test', { method: 'POST', body: 'x' }))
     expect(res.status).toBe(400)
   })
+  it('동시 셔플 경합(RPC concurrent_shuffle) → 409', async () => {
+    vi.mocked(insertShuffleSession).mockRejectedValueOnce(new Error('concurrent_shuffle'))
+    const res = await POST(req({ executedBy: '김철수', pin: '4321', avoidPrev: false }))
+    expect(res.status).toBe(409)
+    expect(await res.json()).toEqual({ error: 'concurrent_shuffle' })
+  })
 })

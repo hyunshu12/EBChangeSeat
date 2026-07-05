@@ -15,6 +15,12 @@ function clientIp(req: Request): string {
   return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
 }
 
+function errorMessage(e: unknown): string {
+  if (e instanceof Error) return e.message
+  if (e && typeof e === 'object' && 'message' in e) return String((e as { message: unknown }).message)
+  return ''
+}
+
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null)
   const executedBy = typeof body?.executedBy === 'string' ? body.executedBy.trim() : ''
@@ -49,12 +55,20 @@ export async function POST(req: Request) {
     seed, maxRedraws: config.maxRedraws,
   })
 
-  await insertShuffleSession({
-    executedBy, avoidPrev: body.avoidPrev, seed: result.seed,
-    redrawCount: result.redrawCount, probSnapshot, arrangement: result.arrangement,
-    decayFactor: config.decayFactor, mcIterations: config.mcIterations,
-    basedOnSessionId: latestSessionId,
-  })
+  try {
+    await insertShuffleSession({
+      executedBy, avoidPrev: body.avoidPrev, seed: result.seed,
+      redrawCount: result.redrawCount, probSnapshot, arrangement: result.arrangement,
+      decayFactor: config.decayFactor, mcIterations: config.mcIterations,
+      basedOnSessionId: latestSessionId,
+    })
+  } catch (e) {
+    // 동시 셔플 경합: 우리가 기준 삼은 최신 세션 이후 다른 셔플이 커밋됨 (RPC 낙관적 락).
+    if (errorMessage(e).includes('concurrent_shuffle')) {
+      return NextResponse.json({ error: 'concurrent_shuffle' }, { status: 409 })
+    }
+    throw e
+  }
 
   return NextResponse.json({
     arrangement: result.arrangement,
