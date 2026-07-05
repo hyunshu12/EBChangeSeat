@@ -37,10 +37,11 @@ export function deriveHistory(sessions: SessionRow[], assignments: AssignmentRow
     const rows = rowsBySession.get(s.id) ?? []
     if (s.type === 'shuffle') {
       if (current) periods.push(current)
-      current = Object.fromEntries(rows.map(r => [r.student_id, r.seat_id]))
+      current = Object.fromEntries(rows.map(r => [r.student_id, r.seat_id] as const))
     } else if (current) {
-      current = { ...current }
-      for (const r of rows) current[r.student_id] = r.seat_id
+      const next: Arrangement = { ...current }
+      for (const r of rows) next[r.student_id] = r.seat_id
+      current = next
     }
   }
   if (current) periods.push(current)
