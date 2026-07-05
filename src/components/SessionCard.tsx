@@ -41,7 +41,11 @@ export function SessionCard({ session, students }: { session: SessionDetail; stu
             직전 자리 피하기 {session.avoid_prev ? 'ON' : 'OFF'}
           </span>
         )}
-        {session.invalidated && <span className="rounded bg-red-200 px-2 text-xs text-red-900">무효</span>}
+        {session.invalidated && (
+          <span className="rounded bg-red-200 px-2 text-xs text-red-900">
+            무효{session.invalidated_at ? ` · ${fmt.format(new Date(session.invalidated_at))} 처리` : ''}
+          </span>
+        )}
         <button type="button" className="ml-auto text-sm underline" onClick={() => setOpen(o => !o)}>
           {open ? '접기' : '상세'}
         </button>
@@ -53,6 +57,18 @@ export function SessionCard({ session, students }: { session: SessionDetail; stu
             <p>
               난수 시드: <code className="rounded bg-gray-100 px-1 dark:bg-gray-800">{session.seed}</code>
               {' '}(재추첨 {session.redraw_count}회 — 재추첨 시드는 <code>시드#1</code>, <code>시드#2</code>…로 파생)
+            </p>
+          )}
+          {session.type === 'shuffle' && (session.decay_factor != null || session.mc_iterations != null) && (
+            <p className="opacity-80">
+              추첨 파라미터:{' '}
+              {session.decay_factor != null && (
+                <>감소 계수 <code className="rounded bg-gray-100 px-1 dark:bg-gray-800">{session.decay_factor}</code></>
+              )}
+              {session.decay_factor != null && session.mc_iterations != null && ' · '}
+              {session.mc_iterations != null && (
+                <>시뮬레이션 <code className="rounded bg-gray-100 px-1 dark:bg-gray-800">{session.mc_iterations.toLocaleString('ko-KR')}</code>회</>
+              )}
             </p>
           )}
           <table className="w-full text-left">

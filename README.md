@@ -60,6 +60,10 @@ npm test
   `pin_attempts` 테이블과 RLS(공개 정책 없음, 서버 service-role 키로만 접근).
 - `002_atomic_insert.sql` — 원자적 삽입 RPC `insert_session_with_assignments`.
   세션과 배정 행을 단일 트랜잭션으로 기록해 고아 세션을 방지한다.
+- `003_audit_completeness.sql` — 감사 완전성. 세션에 `invalidated_at`(무효 시각),
+  `decay_factor`·`mc_iterations`(추첨 파라미터), `based_on_session_id`(기준 세션)
+  컬럼을 추가하고, RPC에 동시 셔플 낙관적 락(advisory lock + 기대 최신 세션 검증)을
+  더한다.
 
 적용 방법 (둘 중 하나):
 
@@ -69,7 +73,7 @@ supabase db push
 ```
 
 또는 Supabase 대시보드의 **SQL Editor**에서 `001_init.sql` → `002_atomic_insert.sql`
-순서대로 붙여넣어 실행한다.
+→ `003_audit_completeness.sql` 순서대로 붙여넣어 실행한다.
 
 ## 학생 명단 수정
 

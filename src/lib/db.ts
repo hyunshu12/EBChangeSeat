@@ -8,6 +8,11 @@ export interface SessionDetail extends SessionRow {
   seed: string | null
   redraw_count: number
   prob_snapshot: ProbMatrix | null
+  // 감사 완전성 컬럼(003 마이그레이션). 과거 세션에는 없을 수 있어 optional.
+  invalidated_at?: string | null
+  decay_factor?: number | null
+  mc_iterations?: number | null
+  based_on_session_id?: string | null
   assignments: AssignmentRow[]
 }
 
@@ -82,6 +87,12 @@ export async function insertShuffleSession(p: {
   redrawCount: number
   probSnapshot: ProbMatrix
   arrangement: Arrangement
+  /** 추첨에 쓰인 감소 계수 — 로그만으로 재현 가능하도록 함께 저장 */
+  decayFactor: number
+  /** 확률 스냅샷 몬테카를로 반복 횟수 */
+  mcIterations: number
+  /** 이 셔플의 기준(=직전 최신 비무효 세션) id. 낙관적 락 기준값도 겸함. null이면 최초 셔플 */
+  basedOnSessionId: string | null
 }): Promise<string> {
   const db = supabaseAdmin()
   const { data, error } = await db.rpc('insert_session_with_assignments', {
@@ -92,6 +103,10 @@ export async function insertShuffleSession(p: {
     p_redraw_count: p.redrawCount,
     p_prob_snapshot: p.probSnapshot,
     p_assignments: arrangementToRpcPayload(p.arrangement),
+    p_decay_factor: p.decayFactor,
+    p_mc_iterations: p.mcIterations,
+    p_based_on: p.basedOnSessionId,
+    p_expected_latest: p.basedOnSessionId,
   })
   if (error) throw error
   return data as string
@@ -117,7 +132,11 @@ export async function insertSwapSession(p: {
 
 export async function setSessionInvalidated(sessionId: string): Promise<void> {
   const db = supabaseAdmin()
-  const { error } = await db.from('sessions').update({ invalidated: true }).eq('id', sessionId)
+  // invalidated_at를 함께 기록 → 감사 재현 시 "T 시점에 이미 무효였는지" 판정 근거.
+  const { error } = await db
+    .from('sessions')
+    .update({ invalidated: true, invalidated_at: new Date().toISOString() })
+    .eq('id', sessionId)
   if (error) throw error
 }
 

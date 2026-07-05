@@ -31,6 +31,10 @@ describe('POST /api/shuffle', () => {
     expect(Object.keys(json.arrangement)).toHaveLength(27)
     expect(json.seed).toMatch(/^[0-9a-f]{32}$/)
     expect(insertShuffleSession).toHaveBeenCalledOnce()
+    // C3/I1: 추첨 파라미터와 낙관적 락 기준(최초 셔플이라 null)이 함께 기록된다.
+    expect(insertShuffleSession).toHaveBeenCalledWith(
+      expect.objectContaining({ decayFactor: 0.5, mcIterations: 10000, basedOnSessionId: null }),
+    )
   })
   it('PIN 불일치 → 401', async () => {
     const res = await POST(req({ executedBy: '김철수', pin: '9999', avoidPrev: false }))

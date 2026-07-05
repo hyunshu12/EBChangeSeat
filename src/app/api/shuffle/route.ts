@@ -30,6 +30,12 @@ export async function POST(req: Request) {
   const { sessions, assignments } = await fetchHistoryRows()
   const history = deriveHistory(sessions, assignments)
 
+  // 낙관적 락 기준: 가장 최근 비무효 세션 id (동시 셔플 경합 감지용). 없으면 null.
+  const latestSessionId = sessions
+    .filter(s => !s.invalidated)
+    .sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id))
+    .at(-1)?.id ?? null
+
   const seed = generateSeed()
   // 셔플 직전 확률 스냅샷: 이 셔플과 같은 조건, 시드는 루트 시드에서 파생 → 스냅샷도 재현 가능
   const probSnapshot = estimateProbabilities({
@@ -46,6 +52,8 @@ export async function POST(req: Request) {
   await insertShuffleSession({
     executedBy, avoidPrev: body.avoidPrev, seed: result.seed,
     redrawCount: result.redrawCount, probSnapshot, arrangement: result.arrangement,
+    decayFactor: config.decayFactor, mcIterations: config.mcIterations,
+    basedOnSessionId: latestSessionId,
   })
 
   return NextResponse.json({
