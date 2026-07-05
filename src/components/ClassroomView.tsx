@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { SeatMap } from './SeatMap'
+import { ShuffleControls } from './ShuffleControls'
 import type { Arrangement, Student } from '@/lib/types'
 
 export interface LatestInfo {
@@ -16,7 +18,16 @@ export function ClassroomView({
   initialArrangement: Arrangement | null
   latestInfo: LatestInfo | null
 }) {
-  const [arrangement] = useState<Arrangement | null>(initialArrangement)
+  const router = useRouter()
+  const [arrangement, setArrangement] = useState<Arrangement | null>(initialArrangement)
+  const [avoidPrev, setAvoidPrev] = useState(true)
+  const [revealKey, setRevealKey] = useState(0)
+
+  const handleShuffleResult = useCallback((next: Arrangement) => {
+    setArrangement(next)
+    setRevealKey(k => k + 1) // 카드 뒤집기 연출 재생
+    router.refresh()
+  }, [router])
 
   return (
     <main className="mx-auto max-w-5xl space-y-6 p-4">
@@ -33,7 +44,8 @@ export function ClassroomView({
         )}
         <a href="/logs" className="text-sm text-blue-600 underline">전체 로그 보기 →</a>
       </header>
-      <SeatMap students={students} arrangement={arrangement} />
+      <ShuffleControls avoidPrev={avoidPrev} onAvoidPrevChange={setAvoidPrev} onResult={handleShuffleResult} />
+      <SeatMap students={students} arrangement={arrangement} revealKey={revealKey} />
     </main>
   )
 }
