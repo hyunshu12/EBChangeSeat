@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { SeatMap } from './SeatMap'
 import { ShuffleControls } from './ShuffleControls'
-import type { Arrangement, Student } from '@/lib/types'
+import type { Arrangement, ProbMatrix, Student } from '@/lib/types'
 
 export interface LatestInfo {
   executedBy: string
@@ -20,14 +20,43 @@ export function ClassroomView({
 }) {
   const router = useRouter()
   const [arrangement, setArrangement] = useState<Arrangement | null>(initialArrangement)
-  const [avoidPrev, setAvoidPrev] = useState(true)
+  const [avoidPrev, setAvoidPrevState] = useState(true)
   const [revealKey, setRevealKey] = useState(0)
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null)
+  const [probs, setProbs] = useState<ProbMatrix | null>(null)
+  const [probsLoading, setProbsLoading] = useState(false)
+
+  const setAvoidPrev = useCallback((v: boolean) => {
+    setAvoidPrevState(v)
+    setProbs(null) // 토글이 바뀌면 확률도 달라짐 → 캐시 무효화
+  }, [])
+
+  const selectStudent = useCallback(async (studentId: string | null) => {
+    if (!studentId || studentId === selectedStudentId) {
+      setSelectedStudentId(null)
+      return
+    }
+    setSelectedStudentId(studentId)
+    if (!probs && !probsLoading) {
+      setProbsLoading(true)
+      try {
+        const res = await fetch(`/api/probabilities?avoidPrev=${avoidPrev}`)
+        if (res.ok) setProbs((await res.json()).probabilities)
+      } finally {
+        setProbsLoading(false)
+      }
+    }
+  }, [selectedStudentId, probs, probsLoading, avoidPrev])
 
   const handleShuffleResult = useCallback((next: Arrangement) => {
     setArrangement(next)
     setRevealKey(k => k + 1) // 카드 뒤집기 연출 재생
+    setProbs(null) // 이력이 늘었으므로 확률 재계산 필요
+    setSelectedStudentId(null)
     router.refresh()
   }, [router])
+
+  const probRow = selectedStudentId && probs ? probs[selectedStudentId] : null
 
   return (
     <main className="mx-auto max-w-5xl space-y-6 p-4">
@@ -44,8 +73,40 @@ export function ClassroomView({
         )}
         <a href="/logs" className="text-sm text-blue-600 underline">전체 로그 보기 →</a>
       </header>
+
       <ShuffleControls avoidPrev={avoidPrev} onAvoidPrevChange={setAvoidPrev} onResult={handleShuffleResult} />
-      <SeatMap students={students} arrangement={arrangement} revealKey={revealKey} />
+
+      {selectedStudentId && (
+        <p className="text-sm">
+          <strong>{students.find(s => s.id === selectedStudentId)?.name}의 다음 셔플 자리별 확률</strong>
+          {probsLoading && ' — 확률 계산 중…'}
+          <button type="button" className="ml-2 text-blue-600 underline" onClick={() => setSelectedStudentId(null)}>
+            닫기
+          </button>
+        </p>
+      )}
+
+      <SeatMap
+        students={students}
+        arrangement={arrangement}
+        probRow={probRow}
+        selectedStudentId={selectedStudentId}
+        revealKey={revealKey}
+        onSeatClick={(_seatId, occupantId) => selectStudent(occupantId)}
+      />
+
+      {!arrangement && (
+        <section className="flex flex-wrap gap-2">
+          {students.map(s => (
+            <button
+              key={s.id} type="button" onClick={() => selectStudent(s.id)}
+              className={`rounded-full border px-3 py-1 text-sm ${s.id === selectedStudentId ? 'ring-2 ring-blue-500' : ''}`}
+            >
+              {s.name}
+            </button>
+          ))}
+        </section>
+      )}
     </main>
   )
 }
