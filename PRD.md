@@ -159,7 +159,9 @@ sessions
   executed_by   text            -- 입력한 실행자 이름
   avoid_prev    boolean         -- 토글 상태 (shuffle만)
   seed          text            -- 공개 난수 시드 (shuffle만)
-  redraw_seeds  text[]          -- 폴백 재추첨으로 폐기된 시드 (있을 때만)
+  redraw_count  int             -- 폴백 재추첨 횟수 (재시도 시드는 루트 시드에서
+                                --  `시드#1`, `시드#2` … 로 결정론적으로 파생되므로
+                                --  횟수만 있으면 전 과정 재현 가능)
   prob_snapshot jsonb           -- 셔플 직전 확률 행렬 (shuffle만)
   invalidated   boolean default false
 
