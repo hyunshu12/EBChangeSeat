@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { SeatMap } from './SeatMap'
 import { ShuffleControls } from './ShuffleControls'
+import { SwapControls } from './SwapControls'
 import type { Arrangement, ProbMatrix, Student } from '@/lib/types'
 
 export interface LatestInfo {
@@ -25,6 +26,8 @@ export function ClassroomView({
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null)
   const [probs, setProbs] = useState<ProbMatrix | null>(null)
   const [probsLoading, setProbsLoading] = useState(false)
+  const [swapMode, setSwapMode] = useState(false)
+  const [swapPicks, setSwapPicks] = useState<string[]>([])
 
   const setAvoidPrev = useCallback((v: boolean) => {
     setAvoidPrevState(v)
@@ -56,6 +59,26 @@ export function ClassroomView({
     router.refresh()
   }, [router])
 
+  const handleSeatClick = useCallback((_seatId: string, occupantId: string | null) => {
+    if (!swapMode) {
+      void selectStudent(occupantId)
+      return
+    }
+    if (!occupantId) return
+    setSwapPicks(prev =>
+      prev.includes(occupantId) ? prev.filter(id => id !== occupantId)
+      : prev.length < 2 ? [...prev, occupantId] : prev,
+    )
+  }, [swapMode, selectStudent])
+
+  const handleSwapResult = useCallback((next: Arrangement) => {
+    setArrangement(next)
+    setSwapMode(false)
+    setSwapPicks([])
+    setProbs(null) // 직전 자리가 바뀌므로 확률도 갱신
+    router.refresh()
+  }, [router])
+
   const probRow = selectedStudentId && probs ? probs[selectedStudentId] : null
 
   return (
@@ -76,6 +99,19 @@ export function ClassroomView({
 
       <ShuffleControls avoidPrev={avoidPrev} onAvoidPrevChange={setAvoidPrev} onResult={handleShuffleResult} />
 
+      {arrangement && !swapMode && (
+        <button type="button" onClick={() => setSwapMode(true)} className="text-sm underline">
+          ↔ 자리 바꾸기 모드
+        </button>
+      )}
+      {swapMode && (
+        <SwapControls
+          picks={swapPicks.map(id => students.find(s => s.id === id)!).filter(Boolean)}
+          onResult={handleSwapResult}
+          onCancel={() => { setSwapMode(false); setSwapPicks([]) }}
+        />
+      )}
+
       {selectedStudentId && (
         <p className="text-sm">
           <strong>{students.find(s => s.id === selectedStudentId)?.name}의 다음 셔플 자리별 확률</strong>
@@ -91,8 +127,9 @@ export function ClassroomView({
         arrangement={arrangement}
         probRow={probRow}
         selectedStudentId={selectedStudentId}
+        swapPicks={swapPicks}
         revealKey={revealKey}
-        onSeatClick={(_seatId, occupantId) => selectStudent(occupantId)}
+        onSeatClick={handleSeatClick}
       />
 
       {!arrangement && (
