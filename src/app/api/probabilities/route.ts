@@ -9,8 +9,9 @@ import type { ProbMatrix } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 
-// 인스턴스별 메모. 이력은 새 세션(셔플·교환·무효)이 생겨야만 바뀌므로
-// (최신 세션 id, avoidPrev)가 키로 충분하다. 익명 GET마다 10k회 MC를 다시 돌리지 않는다.
+// 인스턴스별 메모. 이력은 새 세션이 생기거나 기존 세션이 무효 처리될 때 바뀌므로
+// (최신 비무효 세션 id, 무효 세션 수, avoidPrev)를 키로 쓴다 — 비최신 세션의 사후 무효
+// 처리도 무효 수 변화로 캐시가 갱신된다. 익명 GET마다 10k회 MC를 다시 돌리지 않는다.
 let cache: { key: string; probabilities: ProbMatrix } | null = null
 
 /** 다음 셔플 기준 확률. 조회는 공개 (PIN 불필요). */
@@ -22,7 +23,8 @@ export async function GET(req: Request) {
     .filter(s => !s.invalidated)
     .sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id))
     .at(-1)?.id ?? 'none'
-  const key = `${latestSessionId}:${avoidPrev}`
+  const invalidatedCount = sessions.filter(s => s.invalidated).length
+  const key = `${latestSessionId}:${invalidatedCount}:${avoidPrev}`
   if (cache && cache.key === key) return NextResponse.json({ probabilities: cache.probabilities })
 
   const students = loadStudents()

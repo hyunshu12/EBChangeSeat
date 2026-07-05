@@ -60,9 +60,11 @@ export function arrangementToRpcPayload(
 export async function fetchHistoryRows(): Promise<{ sessions: SessionRow[]; assignments: AssignmentRow[] }> {
   const db = supabaseAdmin()
   // 두 쿼리 모두 페이지네이션: 셔플이 쌓이면 assignments는 물론 sessions도 1000행을 넘는다.
+  // 다중 페이지 .range()는 LIMIT/OFFSET과 같아서, 안정적인 ORDER BY 없이는 페이지 경계에서
+  // 행이 누락·중복될 수 있다 → 반드시 전순서(id)로 정렬해 순회한다.
   const [sessions, assignments] = await Promise.all([
-    fetchAllRows<SessionRow>(() => db.from('sessions').select('id, created_at, type, invalidated, executed_by') as unknown as RangeableQuery<SessionRow>),
-    fetchAllRows<AssignmentRow>(() => db.from('assignments').select('session_id, student_id, seat_id') as unknown as RangeableQuery<AssignmentRow>),
+    fetchAllRows<SessionRow>(() => db.from('sessions').select('id, created_at, type, invalidated, executed_by').order('id') as unknown as RangeableQuery<SessionRow>),
+    fetchAllRows<AssignmentRow>(() => db.from('assignments').select('session_id, student_id, seat_id').order('id') as unknown as RangeableQuery<AssignmentRow>),
   ])
   return { sessions, assignments }
 }
