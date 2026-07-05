@@ -19,13 +19,13 @@ function req(body: unknown): Request {
 }
 
 beforeEach(() => {
-  vi.stubEnv('SHUFFLE_PIN', '0119')
+  vi.stubEnv('SHUFFLE_PIN', '4321')
   vi.clearAllMocks()
 })
 
 describe('POST /api/shuffle', () => {
   it('정상 요청 → 200, 27명 배정 + 시드 반환, 세션 저장', async () => {
-    const res = await POST(req({ executedBy: '김철수', pin: '0119', avoidPrev: true }))
+    const res = await POST(req({ executedBy: '김철수', pin: '4321', avoidPrev: true }))
     expect(res.status).toBe(200)
     const json = await res.json()
     expect(Object.keys(json.arrangement)).toHaveLength(27)
@@ -37,7 +37,7 @@ describe('POST /api/shuffle', () => {
     expect(res.status).toBe(401)
   })
   it('이름 누락/공백 → 400', async () => {
-    const res = await POST(req({ executedBy: '  ', pin: '0119', avoidPrev: false }))
+    const res = await POST(req({ executedBy: '  ', pin: '4321', avoidPrev: false }))
     expect(res.status).toBe(400)
   })
   it('본문이 JSON이 아니면 400', async () => {

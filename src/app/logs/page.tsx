@@ -1,4 +1,5 @@
 import { SessionCard } from '@/components/SessionCard'
+import Link from 'next/link'
 import { fetchSessionsWithAssignments } from '@/lib/db'
 import { loadStudents } from '@/lib/roster'
 
@@ -13,7 +14,7 @@ export default async function LogsPage() {
         <p className="text-sm opacity-70">
           모든 셔플·교환이 시드와 함께 영구 기록됩니다. 기록은 수정·삭제할 수 없습니다.
         </p>
-        <a href="/" className="text-sm text-blue-600 underline">← 배치도로</a>
+        <Link href="/" className="text-sm text-blue-600 underline">← 배치도로</Link>
       </header>
       {sessions.length === 0 && <p className="opacity-60">아직 기록이 없습니다.</p>}
       {sessions.map(s => (

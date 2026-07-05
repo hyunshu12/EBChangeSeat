@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useRef, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ExportImageButton } from './ExportImageButton'
 import { SeatMap } from './SeatMap'
@@ -103,7 +104,7 @@ export function ClassroomView({
         ) : (
           <p className="text-sm opacity-70">아직 배정 이력이 없습니다</p>
         )}
-        <a href="/logs" className="text-sm text-blue-600 underline">전체 로그 보기 →</a>
+        <Link href="/logs" className="text-sm text-blue-600 underline">전체 로그 보기 →</Link>
       </header>
 
       <ShuffleControls avoidPrev={avoidPrev} onAvoidPrevChange={setAvoidPrev} onResult={handleShuffleResult} />

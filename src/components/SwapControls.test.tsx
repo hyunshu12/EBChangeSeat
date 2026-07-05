@@ -18,7 +18,7 @@ describe('SwapControls', () => {
     const onResult = vi.fn()
     render(<SwapControls picks={picks} onResult={onResult} onCancel={vi.fn()} />)
     await userEvent.type(screen.getByLabelText('이름'), '김철수')
-    await userEvent.type(screen.getByLabelText('PIN'), '0119')
+    await userEvent.type(screen.getByLabelText('PIN'), '4321')
     await userEvent.click(screen.getByRole('button', { name: /교환 실행/ }))
     await waitFor(() => expect(onResult).toHaveBeenCalledWith(arrangement))
     expect(fetchMock).toHaveBeenCalledWith('/api/swap', expect.objectContaining({ method: 'POST' }))
