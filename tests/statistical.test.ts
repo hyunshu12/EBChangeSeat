@@ -20,7 +20,10 @@ describe('통계 검증: 균등성', () => {
   it('이력 없음 → 각 학생의 좌석 분포가 균등 (카이제곱 df=26, α=0.001)', () => {
     const p = estimateProbabilities({ ...base, iterations: N, seed: 'stat:uniform' })
     const expected = N / 27
-    for (const s of students.slice(0, 5)) { // 대표 5명 (전원 검사는 느리기만 하고 정보량 동일)
+    // 27×27 확률 행렬이 이미 계산되어 있으므로 전원 카이제곱 합산은 마이크로초 비용.
+    // FWER: 27개 검정 × α=0.001 → 합집합 상한 0.027, 고정 시드라 결정론적이며
+    // 관측 chi² 값은 임계값(54.052)보다 훨씬 낮음.
+    for (const s of students) {
       const chi2 = SEATS.reduce((acc, t) => {
         const observed = p[s.id][t.id] * N
         return acc + (observed - expected) ** 2 / expected
@@ -36,7 +39,10 @@ describe('통계 검증: 균등성', () => {
     const probs = students.map(s => p[s.id][seat])
     const max = Math.max(...probs)
     const min = Math.min(...probs)
-    expect(max - min).toBeLessThan(0.011) // 두 추정치 차의 4σ ≈ 2 × 0.0053
+    // 각 학생의 좌석 확률은 근사 정규 (p=1/27, N=20000 → σ=√(p(1-p)/N)≈0.001335).
+    // max-min 은 27개 주변분포의 범위(range) 통계량이며 E[range]≈4σ≈0.0053.
+    // 상한 0.011≈8σ 은 교환가능성 하에서 범위가 넘지 않을 보수적 한계.
+    expect(max - min).toBeLessThan(0.011)
   })
 })
 
