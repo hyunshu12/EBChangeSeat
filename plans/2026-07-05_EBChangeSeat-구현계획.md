@@ -14,7 +14,7 @@
 - 좌석 27석 고정: 1분단 5행×2열, 2분단 5행×2열, 3분단 1~3행×2열 + **4행 왼쪽 1석**(`3-4-L`). 화면 상단 = 교탁(앞)
 - 감소 계수 기본값 **0.5**, 환경 변수 `DECAY_FACTOR`로 변경 가능
 - 몬테카를로 반복 기본값 **10000**, `MC_ITERATIONS`로 변경 가능
-- PIN은 환경 변수 `SHUFFLE_PIN`으로만 관리 (실제 값 0119는 `.env.local`/Vercel에만 — **코드·저장소에 절대 하드코딩 금지**, `.env.example`에는 자리표시자)
+- PIN은 환경 변수 `SHUFFLE_PIN`으로만 관리 (실제 값 (비공개)는 `.env.local`/Vercel에만 — **코드·저장소에 절대 하드코딩 금지**, `.env.example`에는 자리표시자)
 - 배정 알고리즘 코드(`src/lib/`)에서 `Math.random()` 사용 금지 — 모든 난수는 시드 PRNG(`rng.ts`) 경유
 - 조회(GET)는 인증 없음, 변경(POST)은 전부 PIN 필요
 - 로그는 append-only: 삭제 API를 만들지 않는다. 무효 처리는 `invalidated=true` 마킹만
@@ -1395,7 +1395,7 @@ Supabase MCP가 연결되어 있으면 `apply_migration`(name: `init`, 위 SQL)�
 ```bash
 SUPABASE_URL=<프로젝트 URL>
 SUPABASE_SERVICE_ROLE_KEY=<service_role 키>
-SHUFFLE_PIN=0119
+SHUFFLE_PIN=(비공개)
 ```
 
 - [ ] **Step 3: supabase 클라이언트**
@@ -1591,7 +1591,7 @@ import { checkAndRecordPin, verifyPin } from '@/lib/auth'
 import { countRecentPinFailures, recordPinAttempt } from '@/lib/db'
 
 beforeEach(() => {
-  vi.stubEnv('SHUFFLE_PIN', '0119')
+  vi.stubEnv('SHUFFLE_PIN', '(비공개)')
   vi.mocked(countRecentPinFailures).mockResolvedValue(0)
   vi.mocked(recordPinAttempt).mockResolvedValue()
 })
@@ -1602,20 +1602,20 @@ afterEach(() => {
 
 describe('verifyPin', () => {
   it('일치 → true, 불일치/길이 다름 → false', () => {
-    expect(verifyPin('0119')).toBe(true)
+    expect(verifyPin('(비공개)')).toBe(true)
     expect(verifyPin('0000')).toBe(false)
-    expect(verifyPin('01190')).toBe(false)
+    expect(verifyPin('(비공개)0')).toBe(false)
     expect(verifyPin('')).toBe(false)
   })
   it('SHUFFLE_PIN 미설정 → 에러 (조용한 통과 금지)', () => {
     vi.stubEnv('SHUFFLE_PIN', '')
-    expect(() => verifyPin('0119')).toThrow()
+    expect(() => verifyPin('(비공개)')).toThrow()
   })
 })
 
 describe('checkAndRecordPin', () => {
   it('올바른 PIN → ok, 성공 시도 기록', async () => {
-    await expect(checkAndRecordPin('1.2.3.4', '0119')).resolves.toBe('ok')
+    await expect(checkAndRecordPin('1.2.3.4', '(비공개)')).resolves.toBe('ok')
     expect(recordPinAttempt).toHaveBeenCalledWith('1.2.3.4', true)
   })
   it('틀린 PIN → wrong_pin, 실패 시도 기록', async () => {
@@ -1624,7 +1624,7 @@ describe('checkAndRecordPin', () => {
   })
   it('최근 실패 5회 이상 → rate_limited, PIN 검증 자체를 건너뜀', async () => {
     vi.mocked(countRecentPinFailures).mockResolvedValue(5)
-    await expect(checkAndRecordPin('1.2.3.4', '0119')).resolves.toBe('rate_limited')
+    await expect(checkAndRecordPin('1.2.3.4', '(비공개)')).resolves.toBe('rate_limited')
     expect(recordPinAttempt).not.toHaveBeenCalled()
   })
 })
@@ -1712,13 +1712,13 @@ function req(body: unknown): Request {
 }
 
 beforeEach(() => {
-  vi.stubEnv('SHUFFLE_PIN', '0119')
+  vi.stubEnv('SHUFFLE_PIN', '(비공개)')
   vi.clearAllMocks()
 })
 
 describe('POST /api/shuffle', () => {
   it('정상 요청 → 200, 27명 배정 + 시드 반환, 세션 저장', async () => {
-    const res = await POST(req({ executedBy: '김철수', pin: '0119', avoidPrev: true }))
+    const res = await POST(req({ executedBy: '김철수', pin: '(비공개)', avoidPrev: true }))
     expect(res.status).toBe(200)
     const json = await res.json()
     expect(Object.keys(json.arrangement)).toHaveLength(27)
@@ -1730,7 +1730,7 @@ describe('POST /api/shuffle', () => {
     expect(res.status).toBe(401)
   })
   it('이름 누락/공백 → 400', async () => {
-    const res = await POST(req({ executedBy: '  ', pin: '0119', avoidPrev: false }))
+    const res = await POST(req({ executedBy: '  ', pin: '(비공개)', avoidPrev: false }))
     expect(res.status).toBe(400)
   })
   it('본문이 JSON이 아니면 400', async () => {
@@ -2203,7 +2203,7 @@ describe('ShuffleControls', () => {
     ))
     const onResult = setup()
     await userEvent.type(screen.getByLabelText('이름'), '김철수')
-    await userEvent.type(screen.getByLabelText('PIN'), '0119')
+    await userEvent.type(screen.getByLabelText('PIN'), '(비공개)')
     await userEvent.click(screen.getByRole('button', { name: /전체 자리 배정 실행/ }))
     await waitFor(() => expect(onResult).toHaveBeenCalledWith(arrangement))
   })
@@ -2223,7 +2223,7 @@ describe('ShuffleControls', () => {
     ))
     setup()
     await userEvent.type(screen.getByLabelText('이름'), '김철수')
-    await userEvent.type(screen.getByLabelText('PIN'), '0119')
+    await userEvent.type(screen.getByLabelText('PIN'), '(비공개)')
     await userEvent.click(screen.getByRole('button', { name: /전체 자리 배정 실행/ }))
     expect(await screen.findByText(/시도 횟수를 초과/)).toBeInTheDocument()
   })
@@ -2626,7 +2626,7 @@ describe('SwapControls', () => {
     const onResult = vi.fn()
     render(<SwapControls picks={picks} onResult={onResult} onCancel={vi.fn()} />)
     await userEvent.type(screen.getByLabelText('이름'), '김철수')
-    await userEvent.type(screen.getByLabelText('PIN'), '0119')
+    await userEvent.type(screen.getByLabelText('PIN'), '(비공개)')
     await userEvent.click(screen.getByRole('button', { name: /교환 실행/ }))
     await waitFor(() => expect(onResult).toHaveBeenCalledWith(arrangement))
     expect(fetchMock).toHaveBeenCalledWith('/api/swap', expect.objectContaining({ method: 'POST' }))
@@ -3209,7 +3209,7 @@ npm test          # 전체 테스트 PASS
 npm run lint      # 경고 0
 npm run build     # 빌드 성공
 grep -rn "Math.random" src/   # 결과 없어야 함 (rng.ts 경유 강제)
-grep -rn "0119" src/ docs/ README.md   # 결과 없어야 함 (PIN 하드코딩 금지)
+grep -rn "(비공개)" src/ docs/ README.md   # 결과 없어야 함 (PIN 하드코딩 금지)
 ```
 
 - [ ] **Step 2: 로컬 E2E 수동 검증 (superpowers:verification-before-completion)**
@@ -3246,7 +3246,7 @@ git commit -m "fix: 전문가 리뷰 지적사항 반영"
 
 - [ ] **Step 6: 배포 준비 완료 보고**
 
-사용자에게 보고할 것: 남은 수동 단계 = ① `src/data/students.json` 실명 입력 ② GitHub 저장소 push ③ Vercel 프로젝트 생성 + 환경 변수 설정(SHUFFLE_PIN=0119 포함) ④ 도메인 `ebchange.hyunshu.com` 연결.
+사용자에게 보고할 것: 남은 수동 단계 = ① `src/data/students.json` 실명 입력 ② GitHub 저장소 push ③ Vercel 프로젝트 생성 + 환경 변수 설정(SHUFFLE_PIN=(비공개) 포함) ④ 도메인 `ebchange.hyunshu.com` 연결.
 
 ---
 
