@@ -1,19 +1,19 @@
 'use client'
 
-import { toPng } from 'html-to-image'
-import type { RefObject } from 'react'
 import { useState } from 'react'
+import { renderSeatChartPng } from '@/lib/seatChart'
+import type { Arrangement, Student } from '@/lib/types'
 
-export function ExportImageButton({ targetRef }: { targetRef: RefObject<HTMLElement | null> }) {
+export function ExportImageButton({ students, arrangement }: { students: Student[]; arrangement: Arrangement }) {
   const [busy, setBusy] = useState(false)
 
   async function download() {
-    if (!targetRef.current) return
     setBusy(true)
     try {
-      const dataUrl = await toPng(targetRef.current, { backgroundColor: '#ffffff', pixelRatio: 2 })
+      const dataUrl = await renderSeatChartPng(students, arrangement)
       const a = document.createElement('a')
-      const stamp = new Date().toISOString().slice(0, 10).replaceAll('-', '')
+      // en-CA 형식은 YYYY-MM-DD. 한국 시간 기준 날짜로 파일명을 붙인다
+      const stamp = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date()).replaceAll('-', '')
       a.href = dataUrl
       a.download = `자리배치_${stamp}.png`
       a.click()

@@ -30,7 +30,6 @@ export function ClassroomView({
   const [probsLoading, setProbsLoading] = useState(false)
   const [swapMode, setSwapMode] = useState(false)
   const [swapPicks, setSwapPicks] = useState<string[]>([])
-  const mapRef = useRef<HTMLDivElement>(null)
   const avoidPrevRef = useRef(avoidPrev) // 진행 중 fetch가 최신 토글과 일치하는지 확인용
 
   const setAvoidPrev = useCallback((v: boolean) => {
@@ -134,21 +133,19 @@ export function ClassroomView({
 
       {arrangement && (
         <div className="flex justify-end">
-          <ExportImageButton targetRef={mapRef} />
+          <ExportImageButton students={students} arrangement={arrangement} />
         </div>
       )}
 
-      <div ref={mapRef}>
-        <SeatMap
-          students={students}
-          arrangement={arrangement}
-          probRow={probRow}
-          selectedStudentId={selectedStudentId}
-          swapPicks={swapPicks}
-          revealKey={revealKey}
-          onSeatClick={handleSeatClick}
-        />
-      </div>
+      <SeatMap
+        students={students}
+        arrangement={arrangement}
+        probRow={probRow}
+        selectedStudentId={selectedStudentId}
+        swapPicks={swapPicks}
+        revealKey={revealKey}
+        onSeatClick={handleSeatClick}
+      />
 
       {!arrangement && (
         <section className="flex flex-wrap gap-2">
